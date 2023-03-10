@@ -20,7 +20,7 @@
 
 # Author: Ahmed Albagdady
 # Date: March 6, 2023
-# github.com/amb93/dxf2bmp
+# github.com/amb93
 # ahmad.elbaghdadi46@gmail.com
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -56,8 +56,8 @@ class Ui_dxf2bmp(object):
         self.gridLayout = QtWidgets.QGridLayout(self.centralwidget)
         self.gridLayout.setObjectName("gridLayout")
         self.groupBox_settings = QtWidgets.QGroupBox(self.centralwidget)
-        self.groupBox_settings.setMinimumSize(QtCore.QSize(200, 0))
-        self.groupBox_settings.setMaximumSize(QtCore.QSize(250, 16777215))
+        self.groupBox_settings.setMinimumSize(QtCore.QSize(250, 0))
+        self.groupBox_settings.setMaximumSize(QtCore.QSize(300, 16777215))
         self.groupBox_settings.setObjectName("groupBox_settings")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.groupBox_settings)
         self.gridLayout_2.setObjectName("gridLayout_2")
@@ -123,11 +123,19 @@ class Ui_dxf2bmp(object):
         self.label_resolution_set = QtWidgets.QLabel(self.groupBox_parameters)
         self.label_resolution_set.setObjectName("label_resolution_set")
         self.gridLayout_4.addWidget(self.label_resolution_set, 6, 3, 1, 1)
+
         self.checkBox_invert = QtWidgets.QCheckBox(self.groupBox_parameters)
         self.checkBox_invert.setObjectName("checkBox_invert")
-
         self.gridLayout_4.addWidget(self.checkBox_invert, 8, 1, 1, 1)
-        
+
+        self.Label_vol = QtWidgets.QLabel(self.groupBox_parameters)
+        self.Label_vol.setObjectName("checkBox_invert")
+        self.gridLayout_4.addWidget(self.Label_vol, 9, 1, 1, 1)
+
+        self.Label_vol2 = QtWidgets.QLabel(self.groupBox_parameters)
+        self.Label_vol2.setObjectName("checkBox_invert")
+        self.gridLayout_4.addWidget(self.Label_vol2, 9, 3, 1, 1)        
+
         self.label_floodfill_color = QtWidgets.QLabel(self.groupBox_parameters)
         self.label_floodfill_color.setObjectName("label_floodfill_color")
         self.gridLayout_4.addWidget(self.label_floodfill_color, 7, 1, 1, 1)
@@ -233,6 +241,11 @@ class Ui_dxf2bmp(object):
         self.label_2 = QtWidgets.QLabel(self.groupBox_path)
         self.label_2.setObjectName("label_2")
         self.gridLayout_3.addWidget(self.label_2, 4, 1, 1, 2)
+
+        self.checkbox_scale = QtWidgets.QCheckBox(self.groupBox_path)
+        self.checkbox_scale.setObjectName("checkbox_scale")
+        self.gridLayout_3.addWidget(self.checkbox_scale, 5, 0, 1, 2)
+
         self.gridLayout_2.addWidget(self.groupBox_path, 0, 0, 1, 1)
 
         self.label_license = QtWidgets.QLabel(self.groupBox_settings)
@@ -295,6 +308,9 @@ class Ui_dxf2bmp(object):
         self.checkBox_invert.stateChanged.connect(self.invertImage)    
         self.checkBox_text_overlay.stateChanged.connect(self.toggle_text)
         self.checkBox_text_overlay_custom.stateChanged.connect(self.custom_text_overlay)
+        self.checkbox_scale.stateChanged.connect(self.generateImage)
+
+        self.pushButton.setShortcut("q")
 
     def retranslateUi(self, dxf2bmp):
         _translate = QtCore.QCoreApplication.translate
@@ -332,6 +348,8 @@ class Ui_dxf2bmp(object):
         self.label_text_size.setText(_translate("dxf2bmp", "Text [size, thickness]"))
         self.label_text_pos.setText(_translate("dxf2bmp", "Text position[x,y]"))
         self.label_license.setText(_translate("dxf2bmp", "Copyright (c) 2023, Ahmed Albagdady"))
+        self.checkbox_scale.setText(_translate("dxf2bmp","Scale to fit"))
+        self.Label_vol.setText(_translate("dxf2bmp","Ink volume (nL)"))
 
     def toggle_text(self):
         self.SpinBox_text_size.setEnabled(self.checkBox_text_overlay.checkState())
@@ -432,7 +450,6 @@ class Ui_dxf2bmp(object):
             # Set the text of label_2 to show the dimensions of the blank image
             self.label_2.setText(str(round(((Xmax - Xmin) + (2 * self.spinBox_margin.value())) / dpm)) + "x" + str(round(((Ymax - Ymin) + (2 * self.spinBox_margin.value())) / dpm)) + "mm")
 
-
             # Draw lines
             if Lines.size != 0:
                 for L in Lines:
@@ -450,7 +467,8 @@ class Ui_dxf2bmp(object):
                     ) 
 
             # Draw arcs
-            if Arcs.size != 0:
+            
+            if Arc:
                 for A in Arcs:
                     A[0] = A[0] * dpm - Xmin + self.spinBox_margin.value() # Normalize CenterX
                     A[1] = A[1] * dpm - Ymin + self.spinBox_margin.value() # Normalize CenterY
@@ -506,9 +524,10 @@ class Ui_dxf2bmp(object):
         #Finally, a QGraphicsView is created, and the QGraphicsScene is set to it. 
         #The result is an image viewer that displays the QPixmap object in the QGraphicsView. 
         #The last commented out line shows how to fit the view to the scene's rectangle while keeping the aspect ratio.
+        self.Label_vol2.setText(str(round(self.ZeroCount_DS(image),2)))
 
         #fix the size 
-
+        
         qimage = QtGui.QImage(image, image.shape[1], image.shape[0], image.shape[1],QtGui.QImage.Format_Grayscale8)  
         # create a QPixmap from the QImage
         qpixmap = QtGui.QPixmap.fromImage(qimage)
@@ -523,7 +542,10 @@ class Ui_dxf2bmp(object):
 
         # create a QGraphicsView and set its scene
         self.graphicsView.setScene(scene)
-        #self.graphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio) #aspect ratio
+        if self.checkbox_scale.isChecked():
+            self.graphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatio) #aspect ratio
+        else:
+            self.graphicsView.fitInView(scene.sceneRect(), QtCore.Qt.KeepAspectRatioByExpanding) #aspect ratio
         self.graphicsView.show()
 
     def DrawArc(self,image, center, radius, startAng, endAng, color,resolution):
@@ -659,15 +681,35 @@ class Ui_dxf2bmp(object):
 
         # Generate the BMP path based on the filename and export settings
         if self.checkBox_path.isChecked():
-            path = '/'.join(filename[:-1]) + "/" + filename[-1][:-4] + "_" + str(self.spinBox_dpi_read.value()) + "_" + str(self.spinBox_drop_spacing.value()) + "_" + str(self.spinBox_margin.value()) +".bmp"
+            path = '/'.join(filename[:-1]) + "/" + filename[-1][:-4] + "_" + str(self.spinBox_dpi_read.value()) + "_" + str(self.spinBox_drop_spacing.value()) + "_" + str(self.spinBox_margin.value()) + " " + date.today().strftime("%d-%m-%Y") +".bmp"
         else:
-            path = self.lineEdit_export_path.text() + "/" + filename[-1][:-4] + "_" + str(self.spinBox_dpi_read.value()) + "_" + str(self.spinBox_drop_spacing.value()) + "_" + str(self.spinBox_margin.value()) +".bmp"
+            path = self.lineEdit_export_path.text() + "/" + filename[-1][:-4] + "_" + str(self.spinBox_dpi_read.value()) + "_" + str(self.spinBox_drop_spacing.value()) + "_" + str(self.spinBox_margin.value()) + " " + date.today().strftime("%d-%m-%Y") +".bmp"
 
         # Print the BMP export path for debugging purposes
         print(path)
 
         # Save the BMP file with the desired resolution
         BMPout.save(path ,dpi = (int(self.label_resolution_set.text()),int(self.label_resolution_set.text())))
+
+    def ZeroCount_DS(self,img):
+        # get the height and width of the input image
+        height, width = img.shape
+
+        # calculate the new width and height based on the desired resolution and DPI
+        new_width = int(width * (int(self.label_resolution_set.text()) / self.spinBox_dpi_read.value()))
+        new_height = int(height * (int(self.label_resolution_set.text()) / self.spinBox_dpi_read.value()))
+
+        # resize the image
+        resized_img = cv2.resize(img, (new_width, new_height))
+
+        # calculate the volume of ink in nl by counting the number of black pixels
+        # multiplied by the drop volume (2.4)
+        inkVol = 2.4 * np.count_nonzero(resized_img == 0) * 10**-3
+
+        # return the calculated volume of ink
+        return inkVol
+        
+        
 
 if __name__ == "__main__":
     import sys
